@@ -1,3 +1,4 @@
+import React from 'react';
 import { ContactShadows } from '@react-three/drei';
 
 export const Lights = () => {
@@ -32,11 +33,13 @@ export const Lights = () => {
       <ambientLight
         // intensity={ambientIntensity}
         intensity={1.7}
+        color="#a4cfb4"  // Slight green tint
       />
       <directionalLight
         // ref={directionalLightRef}
         position={[-5, 3, -1]}
         intensity={2.5}
+        color="#f0ffe3"  // Slight money-green tinted light
         // position={directionalLightPosition}
         // intensity={directionalLightIntensity}
         // castShadow={true}
@@ -50,11 +53,20 @@ export const Lights = () => {
         // shadow-bias={-0.1}
       />
 
+      <spotLight
+        position={[2, 4, 2]}
+        angle={0.3}
+        penumbra={0.8}
+        intensity={1.5}
+        color="#bdf0c4"
+        castShadow
+      />
+
       <ContactShadows
         frames={1}
         opacity={0.6}
         blur={2}
-        color="#000000"
+        color="#0f4912"  // Money green shadow
         width={2}
         height={0.4}
         position={[0, -0.66, 0]}
