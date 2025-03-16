@@ -1,4 +1,4 @@
-# Storm Tripper ⛈️🌪️
+# Storm Tripper ⛈️🪩
 
 <div style="font-size: 14px;">
 This is a Claude > Cursor prototype built using ThreeJS. Sources: <a href="https://github.com/seantai/greentub">Base template</a>, <a href="https://github.com/mrdoob/three.js/blob/master/examples/webgl_loader_collada_skinning.html">3D Model</a>.
