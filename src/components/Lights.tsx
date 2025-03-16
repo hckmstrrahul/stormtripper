@@ -1,10 +1,7 @@
-import { Environment, useHelper } from '@react-three/drei';
-import { useControls } from 'leva';
-import { useRef } from 'react';
-import { DirectionalLight, DirectionalLightHelper } from 'three';
+import { ContactShadows } from '@react-three/drei';
 
 export const Lights = () => {
-  const directionalLightRef = useRef<DirectionalLight>(null!);
+  //   const directionalLightRef = useRef<DirectionalLight>(null!);
 
   //   useHelper(directionalLightRef, DirectionalLightHelper, 1, 'red');
 
@@ -37,8 +34,7 @@ export const Lights = () => {
         intensity={1.7}
       />
       <directionalLight
-        ref={directionalLightRef}
-        // and a cursor light?
+        // ref={directionalLightRef}
         position={[-5, 3, -1]}
         intensity={2.5}
         // position={directionalLightPosition}
@@ -52,6 +48,16 @@ export const Lights = () => {
         // shadow-camera-near={0.1}
         // shadow-camera-far={30}
         // shadow-bias={-0.1}
+      />
+
+      <ContactShadows
+        frames={1}
+        opacity={0.6}
+        blur={2}
+        color="#000000"
+        width={2}
+        height={0.4}
+        position={[0, -0.66, 0]}
       />
     </>
   );

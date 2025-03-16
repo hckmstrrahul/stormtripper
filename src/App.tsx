@@ -6,17 +6,18 @@ import { Loader } from './components/Loader';
 import { Bath } from './components/Bath';
 // @ts-ignore
 import { Lights } from './components/Lights';
-import { Leva } from 'leva';
+import { Spinner } from './components/Spinner';
 
 const Scene = () => {
   return (
     <>
       <Suspense fallback={null}>
         <Bath />
-        <Loader />
 
         <Lights />
         <CameraStuff />
+
+        <Loader />
       </Suspense>
     </>
   );
@@ -34,9 +35,9 @@ export default function App() {
           <CanvasWrapper>
             <Scene />
           </CanvasWrapper>
-          <Leva hidden={!import.meta.env.DEV} />
         </div>
       </div>
+      <Spinner />
     </div>
   );
 }

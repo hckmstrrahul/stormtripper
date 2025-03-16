@@ -15,12 +15,9 @@ export function Bath() {
   });
 
   const meshRef = useRef(null);
-  // const instancedMeshRefs = useRef([]);
-  //   const depthMaterialRefs = useRef([]);
 
   const easeSpeed = 0.075;
   const returnSpeed = 0.02;
-  const hoveringRef = useRef(false);
   const returnDelayRef = useRef(0);
   const returnDelayAmount = 60;
 
@@ -48,7 +45,6 @@ export function Bath() {
    
       float distance = length(instancePos - mousePos);
   
-      // Tighter falloff for more dramatic appearance
       float strength = 1.0 - smoothstep(0.0, 1., distance);
     
       // Start at scale 0, grow to full size on hover
@@ -60,50 +56,33 @@ export function Bath() {
     return shader;
   }, []);
 
-  // Handle mouse interaction
+  const dummyVector = new THREE.Vector3(0, 0, 0);
   useFrame((state) => {
     if (!meshRef.current) return;
 
     uniformsRef.current.time.value = state.clock.elapsedTime;
 
-    // Use pointer instead of raycaster for more stable interaction
-    const { pointer, camera } = state;
+    const { raycaster } = state;
 
-    // Create a new raycaster for each frame with the current pointer position
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(pointer, camera);
-
-    // Check for intersections with the entire group
     const intersects = raycaster.intersectObject(meshRef.current, true);
+    const point = intersects[0]?.point || dummyVector;
 
-    if (intersects.length > 0) {
-      // Use the actual intersection point in world space
-      const point = intersects[0].point;
+    // Update hover state and delay
+    const intersections = intersects.length > 0;
+    returnDelayRef.current = intersections
+      ? returnDelayAmount
+      : Math.max(0, returnDelayRef.current - 1);
 
-      // Add smoothing for target position to reduce jumpiness
-      // Instead of setting directly, move towards the new point
-      targetMousePos.x += (point.x - targetMousePos.x) * 0.2;
-      targetMousePos.y += (point.y - targetMousePos.y) * 0.2;
-      targetMousePos.z += (point.z - targetMousePos.z) * 0.2;
-
-      hoveringRef.current = true;
-      returnDelayRef.current = returnDelayAmount; // Reset delay counter
-    } else {
-      // When not hovering, start countdown to return to zero
-      hoveringRef.current = false;
-      if (returnDelayRef.current > 0) {
-        returnDelayRef.current--;
-      } else {
-        // After delay, start moving back to zero
-        targetMousePos.set(0, 0, 0);
-      }
+    // Update target position based on hover state and delay
+    if (intersections) {
+      targetMousePos.lerp(point, 0.2);
+    } else if (returnDelayRef.current === 0) {
+      targetMousePos.set(0, 0, 0);
     }
 
-    // Add damping to make movement smoother
-    const speed = hoveringRef.current ? easeSpeed : returnSpeed;
-    currentMousePos.x += (targetMousePos.x - currentMousePos.x) * speed;
-    currentMousePos.y += (targetMousePos.y - currentMousePos.y) * speed;
-    currentMousePos.z += (targetMousePos.z - currentMousePos.z) * speed;
+    // Smooth movement with dynamic speed
+    const speed = intersections ? easeSpeed : returnSpeed;
+    currentMousePos.lerp(targetMousePos, speed);
 
     uniformsRef.current.mousePos.value = [
       currentMousePos.x,
@@ -137,7 +116,6 @@ export function Bath() {
       /> */}
       <instancedMesh
         args={[nodes.Retopo_Bathtub0.geometry, null, 151]}
-        // args={[nodes.Retopo_Bathtub0.geometry, null, 167]}
         instanceMatrix={nodes.Retopo_Bathtub0.instanceMatrix}>
         <meshStandardMaterial
           map={materials['celandine_01.001'].map}
