@@ -3,7 +3,7 @@ import { CanvasWrapper } from './components/CanvasWrapper';
 import { CameraStuff } from './components/CameraStuff';
 import { Loader } from './components/Loader';
 // @ts-ignore
-import { Bath } from './components/Bath';
+import { Stormtripper } from './components/Stormtripper';
 // @ts-ignore
 import { Lights } from './components/Lights';
 import { Spinner } from './components/Spinner';
@@ -12,7 +12,7 @@ const Scene = () => {
   return (
     <>
       <Suspense fallback={null}>
-        <Bath />
+        <Stormtripper />
 
         <Lights />
         <CameraStuff />
