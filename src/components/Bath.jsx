@@ -1,11 +1,12 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { useGLTF, Wireframe } from '@react-three/drei';
+import { ContactShadows, useGLTF, Wireframe } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useResponsiveScale } from '../lib/utils';
 
 export function Bath() {
   const { nodes, materials } = useGLTF('bath3.1.glb');
+  console.log(materials);
   const { scale } = useResponsiveScale();
 
   const [targetMousePos] = useState(new THREE.Vector3(0, 0, 0));
@@ -18,9 +19,9 @@ export function Bath() {
 
   const meshRef = useRef(null);
   const instancedMeshRefs = useRef([]);
-  const depthMaterialRefs = useRef([]);
+  //   const depthMaterialRefs = useRef([]);
 
-  const easeSpeed = 0.05;
+  const easeSpeed = 0.075;
   const returnSpeed = 0.02;
   const hoveringRef = useRef(false);
   const returnDelayRef = useRef(0);
@@ -35,7 +36,6 @@ export function Bath() {
       `
       uniform float time;
       uniform vec3 mousePos;
-      varying float vScale;
       
       void main() {
       `
@@ -52,7 +52,7 @@ export function Bath() {
       float distance = length(instancePos - mousePos);
   
       // Tighter falloff for more dramatic appearance
-      float strength = 1.0 - smoothstep(0.0, .7, distance);
+      float strength = 1.0 - smoothstep(0.0, 1., distance);
     
       // Start at scale 0, grow to full size on hover
       float scaleFactor = strength;
@@ -70,7 +70,7 @@ export function Bath() {
     uniformsRef.current.time.value = state.clock.elapsedTime;
 
     // Use pointer instead of raycaster for more stable interaction
-    const { pointer, camera, scene } = state;
+    const { pointer, camera } = state;
 
     // Create a new raycaster for each frame with the current pointer position
     const raycaster = new THREE.Raycaster();
@@ -126,21 +126,6 @@ export function Bath() {
 
   return (
     <group dispose={null} ref={meshRef}>
-      <directionalLight
-        // and a cursor light?
-        position={[3, 8, -2]}
-        intensity={2}
-        castShadow={true}
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-5}
-        shadow-camera-right={5}
-        shadow-camera-top={5}
-        shadow-camera-bottom={-5}
-        shadow-camera-near={0.1}
-        shadow-camera-far={30}
-        shadow-bias={-0.1}
-      />
-
       <mesh
         castShadow
         receiveShadow
@@ -149,6 +134,15 @@ export function Bath() {
         material-roughness={0.5}
         material-metalness={0.5}
         // material-wireframe={true}
+      />
+      <ContactShadows
+        frames={1}
+        opacity={0.6}
+        blur={2}
+        color="#000000"
+        width={2}
+        height={0.4}
+        position={[0, -0.66, 0]}
       />
       {/* <mesh
         raycast={() => null}
@@ -165,8 +159,8 @@ export function Bath() {
         <meshStandardMaterial
           map={materials['celandine_01.001'].map}
           normalMap={materials['celandine_01.001'].normalMap}
-          roughness={1}
-          metalness={0.2}
+          roughnessMap={materials['celandine_01.001'].roughnessMap}
+          metalnessMap={materials['celandine_01.001'].metalnessMap}
           onBeforeCompile={(shader) => {
             modifyShader(shader);
           }}
@@ -182,8 +176,8 @@ export function Bath() {
         <meshStandardMaterial
           map={materials['celandine_01.001'].map}
           normalMap={materials['celandine_01.001'].normalMap}
-          roughness={1}
-          metalness={0.2}
+          roughnessMap={materials['celandine_01.001'].roughnessMap}
+          metalnessMap={materials['celandine_01.001'].metalnessMap}
           onBeforeCompile={(shader) => {
             modifyShader(shader);
           }}
@@ -199,8 +193,8 @@ export function Bath() {
         <meshStandardMaterial
           map={materials['celandine_01.001'].map}
           normalMap={materials['celandine_01.001'].normalMap}
-          roughness={1}
-          metalness={0.2}
+          roughnessMap={materials['celandine_01.001'].roughnessMap}
+          metalnessMap={materials['celandine_01.001'].metalnessMap}
           onBeforeCompile={(shader) => {
             modifyShader(shader);
           }}
@@ -216,8 +210,10 @@ export function Bath() {
         <meshStandardMaterial
           map={materials['celandine_01.001'].map}
           normalMap={materials['celandine_01.001'].normalMap}
-          roughness={1}
-          metalness={0.2}
+          roughnessMap={materials['celandine_01.001'].roughnessMap}
+          metalnessMap={materials['celandine_01.001'].metalnessMap}
+          // roughness={1}
+          // metalness={0.2}
           onBeforeCompile={(shader) => {
             modifyShader(shader);
           }}
@@ -233,8 +229,8 @@ export function Bath() {
         <meshStandardMaterial
           map={materials['celandine_01.001'].map}
           normalMap={materials['celandine_01.001'].normalMap}
-          roughness={1}
-          metalness={0.2}
+          // roughness={1}
+          // metalness={0.2}
           onBeforeCompile={(shader) => {
             modifyShader(shader);
           }}
