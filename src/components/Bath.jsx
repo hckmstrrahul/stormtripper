@@ -1,13 +1,10 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { ContactShadows, useGLTF, Wireframe } from '@react-three/drei';
+import { ContactShadows, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
+import React, { useCallback, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { useResponsiveScale } from '../lib/utils';
 
 export function Bath() {
   const { nodes, materials } = useGLTF('bath3.1.glb');
-  console.log(materials);
-  const { scale } = useResponsiveScale();
 
   const [targetMousePos] = useState(new THREE.Vector3(0, 0, 0));
   const [currentMousePos] = useState(new THREE.Vector3(0, 0, 0));
@@ -18,7 +15,7 @@ export function Bath() {
   });
 
   const meshRef = useRef(null);
-  const instancedMeshRefs = useRef([]);
+  // const instancedMeshRefs = useRef([]);
   //   const depthMaterialRefs = useRef([]);
 
   const easeSpeed = 0.075;
@@ -91,15 +88,6 @@ export function Bath() {
 
       hoveringRef.current = true;
       returnDelayRef.current = returnDelayAmount; // Reset delay counter
-
-      // // Update spotlight position to follow cursor
-      // if (spotlightRef.current) {
-      //   // Position the spotlight above the cursor point
-      //   spotlightRef.current.position.set(point.x, point.y + 2, point.z);
-      //   // Target the spotlight at the cursor point
-      //   spotlightRef.current.target.position.set(point.x, point.y, point.z);
-      //   spotlightRef.current.target.updateMatrixWorld();
-      // }
     } else {
       // When not hovering, start countdown to return to zero
       hoveringRef.current = false;
@@ -127,13 +115,11 @@ export function Bath() {
   return (
     <group dispose={null} ref={meshRef}>
       <mesh
-        castShadow
         receiveShadow
         geometry={nodes.Retopo_Bathtub.geometry}
         material={materials['White ceramic']}
         material-roughness={0.5}
         material-metalness={0.5}
-        // material-wireframe={true}
       />
       <ContactShadows
         frames={1}
@@ -150,9 +136,6 @@ export function Bath() {
         material={materials.Chrome}
       /> */}
       <instancedMesh
-        ref={(el) => (instancedMeshRefs.current[0] = el)}
-        castShadow
-        receiveShadow
         args={[nodes.Retopo_Bathtub0.geometry, null, 151]}
         // args={[nodes.Retopo_Bathtub0.geometry, null, 167]}
         instanceMatrix={nodes.Retopo_Bathtub0.instanceMatrix}>
@@ -167,11 +150,7 @@ export function Bath() {
         />
       </instancedMesh>
       <instancedMesh
-        ref={(el) => (instancedMeshRefs.current[1] = el)}
-        castShadow
-        receiveShadow
         args={[nodes.Retopo_Bathtub1.geometry, null, 131]}
-        // args={[nodes.Retopo_Bathtub1.geometry, null, 155]}
         instanceMatrix={nodes.Retopo_Bathtub1.instanceMatrix}>
         <meshStandardMaterial
           map={materials['celandine_01.001'].map}
@@ -184,10 +163,6 @@ export function Bath() {
         />
       </instancedMesh>
       <instancedMesh
-        ref={(el) => (instancedMeshRefs.current[2] = el)}
-        castShadow
-        receiveShadow
-        // args={[nodes.Retopo_Bathtub2.geometry, null, 120]}
         args={[nodes.Retopo_Bathtub2.geometry, null, 102]}
         instanceMatrix={nodes.Retopo_Bathtub2.instanceMatrix}>
         <meshStandardMaterial
@@ -201,10 +176,6 @@ export function Bath() {
         />
       </instancedMesh>
       <instancedMesh
-        ref={(el) => (instancedMeshRefs.current[3] = el)}
-        castShadow
-        receiveShadow
-        // args={[nodes.Retopo_Bathtub3.geometry, null, 138]}
         args={[nodes.Retopo_Bathtub3.geometry, null, 124]}
         instanceMatrix={nodes.Retopo_Bathtub3.instanceMatrix}>
         <meshStandardMaterial
@@ -212,25 +183,17 @@ export function Bath() {
           normalMap={materials['celandine_01.001'].normalMap}
           roughnessMap={materials['celandine_01.001'].roughnessMap}
           metalnessMap={materials['celandine_01.001'].metalnessMap}
-          // roughness={1}
-          // metalness={0.2}
           onBeforeCompile={(shader) => {
             modifyShader(shader);
           }}
         />
       </instancedMesh>
       <instancedMesh
-        ref={(el) => (instancedMeshRefs.current[4] = el)}
-        castShadow
-        receiveShadow
-        // args={[nodes.Retopo_Bathtub4.geometry, null, 174]}
         args={[nodes.Retopo_Bathtub4.geometry, null, 152]}
         instanceMatrix={nodes.Retopo_Bathtub4.instanceMatrix}>
         <meshStandardMaterial
           map={materials['celandine_01.001'].map}
           normalMap={materials['celandine_01.001'].normalMap}
-          // roughness={1}
-          // metalness={0.2}
           onBeforeCompile={(shader) => {
             modifyShader(shader);
           }}
