@@ -23,16 +23,14 @@ export const CameraStuff = () => {
         makeDefault
         minPolarAngle={Math.PI * 0.1}
         maxPolarAngle={Math.PI * 0.5}
-        // minDistance={0.1}
-        // maxDistance={0.2}
-        // maxZoom={0.5}
-        // minZoom={0.1}
-        // mouseButtons={{
-        //   left: 1,
-        //   middle: 0,
-        //   right: 0,
-        //   wheel: 16
-        // }}
+        minDistance={0.7}
+        maxDistance={2.5}
+        mouseButtons={{
+          left: 1,
+          middle: 0,
+          right: 0,
+          wheel: 8
+        }}
         touches={{
           one: 0,
           two: 0,
