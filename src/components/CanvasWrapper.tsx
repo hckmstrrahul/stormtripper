@@ -17,7 +17,7 @@ export const CanvasWrapper = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: isSceneLoaded ? 1 : 0 }}
       transition={{ duration: 0.6, ease: [0.26, 0.05, 0.25, 1] }}
-      className="pointer-events-none fixed inset-0 z-10 h-full w-full overflow-hidden">
+      className="pointer-events-none fixed inset-0 z-[10] h-full w-full overflow-hidden bg-transparent">
       <Canvas
         {...canvasProps}
         eventSource={document.getElementById('root')!}
