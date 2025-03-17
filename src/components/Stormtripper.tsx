@@ -217,6 +217,122 @@ export const Stormtripper = () => {
   }, []);
   
   useEffect(() => {
+    // Success callback for model loading
+    const onModelLoaded = (gltf: any) => {
+      console.log("Model loaded successfully:", gltf);
+      const avatar = gltf.scene;
+      
+      // VERY aggressive shadow removal
+      // Disable shadows on ALL materials in the entire scene
+      avatar.traverse((child: THREE.Object3D) => {
+        // Disable all shadows on all objects
+        child.castShadow = false;
+        child.receiveShadow = false;
+        
+        // Check if it's a mesh
+        if (child instanceof THREE.Mesh) {
+          // Special check for potential shadow planes
+          // Disable/remove anything that looks like a shadow
+          if (child.material) {
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            
+            // Check each material
+            for (const mat of materials) {
+              // Disable all shadow-related properties on materials
+              if ('shadowSide' in mat) {
+                mat.shadowSide = null;
+              }
+              
+              // Check color for brownish tones - be more aggressive in detection
+              if ('color' in mat && mat.color instanceof THREE.Color) {
+                const { r, g, b } = mat.color;
+                
+                // Wider color range for detecting shadow elements
+                if ((r > 0.2 && r < 0.7 && g > 0.1 && g < 0.5 && b < 0.4) || 
+                    (child.position.y < 0 && child.scale.y < 0.5)) {
+                  // This is likely a shadow plane - make it invisible
+                  child.visible = false;
+                  console.log("Hiding shadow element:", child.name);
+                }
+              }
+            }
+          }
+          
+          // Check geometry for flat objects
+          if (child.geometry) {
+            child.geometry.computeBoundingBox();
+            const box = child.geometry.boundingBox;
+            
+            if (box) {
+              const height = box.max.y - box.min.y;
+              const width = box.max.x - box.min.x;
+              const depth = box.max.z - box.min.z;
+              
+              // More aggressive detection of flat geometry
+              if (height < 0.5 && (width > 1.5 || depth > 1.5)) {
+                child.visible = false;
+                console.log("Hiding shadow plane based on dimensions:", child.name);
+              }
+            }
+          }
+        }
+      });
+      
+      // Center and scale the model appropriately
+      avatar.position.set(0, 0, 0);
+      
+      // Apply animation if available
+      if (gltf.animations && gltf.animations.length) {
+        // Create a mixer for animations
+        const newMixer = new THREE.AnimationMixer(avatar);
+        
+        // Create animation action and play it
+        const animationAction = newMixer.clipAction(gltf.animations[0]);
+        animationAction.play();
+        
+        // Set mixer state
+        setMixer(newMixer);
+      }
+      
+      // Add the model to our reference
+      modelRef.current.add(avatar);
+      
+      // Signal that the scene has loaded
+      setSceneLoaded(true);
+      
+      // Debug log
+      console.log("Model added to scene");
+    };
+
+    // Progress callback
+    const onProgress = (xhr: ProgressEvent) => {
+      console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
+    };
+    
+    // Load model with retry for different paths
+    const loadModelWithRetry = (loader: any) => {
+      // First try with absolute path
+      loader.load('/dancing_stormtrooper.glb', 
+        // Success callback
+        onModelLoaded,
+        // Progress callback
+        onProgress,
+        // Error callback - try fallback path if this fails
+        (error: any) => {
+          console.warn('Failed to load with absolute path, trying relative path:', error);
+          
+          // Try with relative path as fallback
+          loader.load('./dancing_stormtrooper.glb', 
+            onModelLoaded,
+            onProgress,
+            (fallbackError: any) => {
+              console.error('Error loading model with both paths:', fallbackError);
+            }
+          );
+        }
+      );
+    };
+
     // Load the model directly
     const loadModel = async () => {
       try {
@@ -226,103 +342,9 @@ export const Stormtripper = () => {
         const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
         const loader = new GLTFLoader();
         
-        // Load the GLB model
-        loader.load('/dancing_stormtrooper.glb', 
-          // Success callback
-          (gltf: any) => {
-            console.log("Model loaded successfully:", gltf);
-            const avatar = gltf.scene;
-            
-            // VERY aggressive shadow removal
-            // Disable shadows on ALL materials in the entire scene
-            avatar.traverse((child: THREE.Object3D) => {
-              // Disable all shadows on all objects
-              child.castShadow = false;
-              child.receiveShadow = false;
-              
-              // Check if it's a mesh
-              if (child instanceof THREE.Mesh) {
-                // Special check for potential shadow planes
-                // Disable/remove anything that looks like a shadow
-                if (child.material) {
-                  const materials = Array.isArray(child.material) ? child.material : [child.material];
-                  
-                  // Check each material
-                  for (const mat of materials) {
-                    // Disable all shadow-related properties on materials
-                    if ('shadowSide' in mat) {
-                      mat.shadowSide = null;
-                    }
-                    
-                    // Check color for brownish tones - be more aggressive in detection
-                    if ('color' in mat && mat.color instanceof THREE.Color) {
-                      const { r, g, b } = mat.color;
-                      
-                      // Wider color range for detecting shadow elements
-                      if ((r > 0.2 && r < 0.7 && g > 0.1 && g < 0.5 && b < 0.4) || 
-                          (child.position.y < 0 && child.scale.y < 0.5)) {
-                        // This is likely a shadow plane - make it invisible
-                        child.visible = false;
-                        console.log("Hiding shadow element:", child.name);
-                      }
-                    }
-                  }
-                }
-                
-                // Check geometry for flat objects
-                if (child.geometry) {
-                  child.geometry.computeBoundingBox();
-                  const box = child.geometry.boundingBox;
-                  
-                  if (box) {
-                    const height = box.max.y - box.min.y;
-                    const width = box.max.x - box.min.x;
-                    const depth = box.max.z - box.min.z;
-                    
-                    // More aggressive detection of flat geometry
-                    if (height < 0.5 && (width > 1.5 || depth > 1.5)) {
-                      child.visible = false;
-                      console.log("Hiding shadow plane based on dimensions:", child.name);
-                    }
-                  }
-                }
-              }
-            });
-            
-            // Center and scale the model appropriately
-            avatar.position.set(0, 0, 0);
-            
-            // Apply animation if available
-            if (gltf.animations && gltf.animations.length) {
-              // Create a mixer for animations
-              const newMixer = new THREE.AnimationMixer(avatar);
-              
-              // Create animation action and play it
-              const animationAction = newMixer.clipAction(gltf.animations[0]);
-              animationAction.play();
-              
-              // Set mixer state
-              setMixer(newMixer);
-            }
-            
-            // Add the model to our reference
-            modelRef.current.add(avatar);
-            
-            // Signal that the scene has loaded
-            setSceneLoaded(true);
-            
-            // Debug log
-            console.log("Model added to scene");
-          },
-          // Progress callback
-          (xhr: ProgressEvent) => {
-            console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
-          },
-          // Error callback
-          (error: any) => {
-            console.error('Error loading model:', error);
-          }
-        );
+        // Load model with retry mechanism
+        loadModelWithRetry(loader);
+        
       } catch (error) {
         console.error("Failed to load model:", error);
       }
