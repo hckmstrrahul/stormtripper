@@ -3,13 +3,16 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useSceneLoadedStore } from '../store';
 
-// Define a proper type for Collada result
-type ColladalLoaderResult = {
+// Define the GLTF interface to avoid import issues
+interface GLTF {
   scene: THREE.Group;
+  scenes: THREE.Group[];
   animations: THREE.AnimationClip[];
-  kinematics: any;
-  library: any;
-};
+  asset: {
+    generator: string;
+    version: string;
+  };
+}
 
 // Rain Lines component
 const RainEffect = () => {
@@ -152,62 +155,172 @@ const WindEffect = () => {
   return <points ref={windRef} geometry={particlesGeometry} material={particleMaterial} />;
 };
 
+// Custom shader for static gradient floor
+const StaticGradientShader = {
+  uniforms: {
+    colorA: { value: new THREE.Color('#2D882D') }, // Green
+    colorB: { value: new THREE.Color('#000000') }  // Black
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform vec3 colorA;
+    uniform vec3 colorB;
+    varying vec2 vUv;
+    
+    void main() {
+      // Center UV coordinates for circular effect
+      vec2 centeredUV = vUv * 2.0 - 1.0;
+      float dist = length(centeredUV);
+      
+      // Discard fragments outside the circle with soft edge
+      if (dist > 1.0) {
+        discard;
+      }
+      
+      // Simple radial gradient from center to edge
+      float radialGradient = dist;
+      
+      // Simple green to black transition
+      vec3 finalColor = mix(colorA, colorB, radialGradient);
+      
+      gl_FragColor = vec4(finalColor, 1.0);
+    }
+  `
+};
+
 export const Stormtripper = () => {
   const { setSceneLoaded } = useSceneLoadedStore();
   const [mixer, setMixer] = useState<THREE.AnimationMixer | null>(null);
   const clock = useRef(new THREE.Clock());
   const modelRef = useRef<THREE.Group>(new THREE.Group());
-  const [gridHelper, setGridHelper] = useState<THREE.GridHelper | null>(null);
-
+  const sceneRef = useRef<THREE.Scene>(new THREE.Scene());
+  
+  // Track which meshes to keep (all except shadow plane)
+  const [filteredMeshes, setFilteredMeshes] = useState<THREE.Object3D[]>([]);
+  
+  // Create shader material with our static shader
+  const gradientMaterial = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      uniforms: StaticGradientShader.uniforms,
+      vertexShader: StaticGradientShader.vertexShader,
+      fragmentShader: StaticGradientShader.fragmentShader,
+      transparent: false,
+      side: THREE.FrontSide
+    });
+  }, []);
+  
   useEffect(() => {
     // Load the model directly
     const loadModel = async () => {
       try {
         console.log("Starting to load model");
         
-        // Dynamically import the loader
-        const { ColladaLoader } = await import('three/examples/jsm/loaders/ColladaLoader.js');
-        const loader = new ColladaLoader();
+        // Dynamically import the GLTFLoader instead of ColladaLoader
+        const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+        const loader = new GLTFLoader();
         
-        // Create a grid helper right away, don't wait for the model
-        const grid = new THREE.GridHelper(10, 20, 0xc1c1c1, 0x8d8d8d);
-        setGridHelper(grid);
-        
-        // Load the model
-        // @ts-ignore - Ignoring type issues to make this work
-        loader.load('/models/collada/stormtrooper/stormtrooper.dae', 
+        // Load the GLB model
+        loader.load('/dancing_stormtrooper.glb', 
           // Success callback
-          (collada: any) => {
-            console.log("Model loaded successfully:", collada);
-            const avatar = collada.scene;
+          (gltf: any) => {
+            console.log("Model loaded successfully:", gltf);
+            const avatar = gltf.scene;
             
-            // Add the model to our group
-            if (modelRef.current) {
-              modelRef.current.add(avatar);
+            // VERY aggressive shadow removal
+            // Disable shadows on ALL materials in the entire scene
+            avatar.traverse((child: THREE.Object3D) => {
+              // Disable all shadows on all objects
+              child.castShadow = false;
+              child.receiveShadow = false;
               
-              // Check for animations
-              if (collada.animations && collada.animations.length > 0) {
-                console.log("Found animations:", collada.animations.length);
+              // Check if it's a mesh
+              if (child instanceof THREE.Mesh) {
+                // Special check for potential shadow planes
+                // Disable/remove anything that looks like a shadow
+                if (child.material) {
+                  const materials = Array.isArray(child.material) ? child.material : [child.material];
+                  
+                  // Check each material
+                  for (const mat of materials) {
+                    // Disable all shadow-related properties on materials
+                    if ('shadowSide' in mat) {
+                      mat.shadowSide = null;
+                    }
+                    
+                    // Check color for brownish tones - be more aggressive in detection
+                    if ('color' in mat && mat.color instanceof THREE.Color) {
+                      const { r, g, b } = mat.color;
+                      
+                      // Wider color range for detecting shadow elements
+                      if ((r > 0.2 && r < 0.7 && g > 0.1 && g < 0.5 && b < 0.4) || 
+                          (child.position.y < 0 && child.scale.y < 0.5)) {
+                        // This is likely a shadow plane - make it invisible
+                        child.visible = false;
+                        console.log("Hiding shadow element:", child.name);
+                      }
+                    }
+                  }
+                }
                 
-                // Create and set up the animation mixer
-                const newMixer = new THREE.AnimationMixer(avatar);
-                newMixer.clipAction(collada.animations[0]).play();
-                setMixer(newMixer);
-              } else {
-                console.warn("No animations found in the model");
+                // Check geometry for flat objects
+                if (child.geometry) {
+                  child.geometry.computeBoundingBox();
+                  const box = child.geometry.boundingBox;
+                  
+                  if (box) {
+                    const height = box.max.y - box.min.y;
+                    const width = box.max.x - box.min.x;
+                    const depth = box.max.z - box.min.z;
+                    
+                    // More aggressive detection of flat geometry
+                    if (height < 0.5 && (width > 1.5 || depth > 1.5)) {
+                      child.visible = false;
+                      console.log("Hiding shadow plane based on dimensions:", child.name);
+                    }
+                  }
+                }
               }
+            });
+            
+            // Center and scale the model appropriately
+            avatar.position.set(0, 0, 0);
+            
+            // Apply animation if available
+            if (gltf.animations && gltf.animations.length) {
+              // Create a mixer for animations
+              const newMixer = new THREE.AnimationMixer(avatar);
               
-              setSceneLoaded(true);
+              // Create animation action and play it
+              const animationAction = newMixer.clipAction(gltf.animations[0]);
+              animationAction.play();
+              
+              // Set mixer state
+              setMixer(newMixer);
             }
+            
+            // Add the model to our reference
+            modelRef.current.add(avatar);
+            
+            // Signal that the scene has loaded
+            setSceneLoaded(true);
+            
+            // Debug log
+            console.log("Model added to scene");
           },
           // Progress callback
-          (xhr: any) => {
-            const percent = xhr.loaded / xhr.total * 100;
-            console.log(`${percent.toFixed(0)}% loaded`);
+          (xhr: ProgressEvent) => {
+            console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
           },
           // Error callback
           (error: any) => {
-            console.error("Error loading model:", error);
+            console.error('Error loading model:', error);
           }
         );
       } catch (error) {
@@ -218,30 +331,39 @@ export const Stormtripper = () => {
     loadModel();
     
     return () => {
-      if (modelRef.current) {
-        modelRef.current.clear();
+      // Clean up
+      if (mixer) {
+        mixer.stopAllAction();
       }
+      
+      modelRef.current.clear();
     };
   }, [setSceneLoaded]);
-
-  useFrame(() => {
+  
+  // Animation loop
+  useFrame((state) => {
+    const delta = clock.current.getDelta();
+    
     if (mixer) {
-      const delta = clock.current.getDelta();
       mixer.update(delta);
     }
   });
-
+  
   return (
     <>
-      <primitive object={modelRef.current} />
-      {gridHelper && <primitive object={gridHelper} />}
+      {/* Static gradient circular floor */}
+      <mesh 
+        rotation={[-Math.PI / 2, 0, 0]} 
+        position={[0, -0.001, 0]} 
+        receiveShadow={false} 
+        castShadow={false}
+      >
+        <circleGeometry args={[25, 72]} />
+        <primitive object={gradientMaterial} attach="material" />
+      </mesh>
       
-      {/* Lighting setup to match the example */}
-      <ambientLight intensity={0.6} />
-      <directionalLight 
-        intensity={3} 
-        position={[1.5, 1, -1.5]} 
-      />
+      {/* Main model */}
+      <primitive object={modelRef.current} />
       
       {/* Weather effects */}
       <RainEffect />
